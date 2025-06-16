@@ -25,11 +25,11 @@ class World:
         self.team_a = FootballTeam("A Team", (255, 0, 0))
         self.teams.append(self.team_a)
 
-        self.team_b = FootballTeam("B Team", (0, 0, 255))
+        self.team_b = FootballTeam("B Team", (0, 0, 255), is_on_left_side=False)
         self.teams.append(self.team_b)
 
         # Create ball
-        ball = FootballBall(500, 500, mass=10)
+        ball = FootballBall(self.field.length/2+self.OFF_SET, self.field.width/2+self.OFF_SET, mass=10)
 
         self.balls.append(ball)
         self.objects.append(ball)
