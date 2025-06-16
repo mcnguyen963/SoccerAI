@@ -9,7 +9,10 @@ import csv
 
 import math
 class World:
-    OFF_SET = 50 #SPACING FROM TOP RIGHT
+    OFF_SET = 50 # SPACING FROM TOP RIGHT
+    TARGET_GOAL_VALUE = 1 # value determine the vicotry team
+    MAX_GAME_DURATION = 180  # seconds
+
     def __init__(self):
         pygame.init()
         self.objects=[]
@@ -38,7 +41,6 @@ class World:
         self.collidable_objects.append(ball)
 
         self.add_player_from_file()
-
 
         self.player_controller = PlayerController(self)
 
@@ -83,8 +85,13 @@ class World:
             print(f"Error loading players from file: {e}")
 
     def run(self):
-        while self.running:
+        start_time = pygame.time.get_ticks()  # milliseconds
+
+        while self.running and self.get_winning_team() is None:
             dt = self.clock.tick(60) / 1000.0  # seconds passed
+            if (pygame.time.get_ticks() - start_time) / 1000.0 >= self.MAX_GAME_DURATION:
+                print("Time limit reached.")
+                break  # Terminate game
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -105,5 +112,10 @@ class World:
 
             pygame.display.flip()
             # You can remove this second clock.tick(60) call; it's redundant
-
+        return self.get_winning_team()
         pygame.quit()
+    def get_winning_team(self):
+        for team in self.teams:
+            if team.score >= self.TARGET_GOAL_VALUE:
+                return team
+        return None
