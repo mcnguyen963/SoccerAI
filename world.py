@@ -13,6 +13,8 @@ class World:
         self.objects=[]
         self.players = []
         self.teams=[]
+        self.balls = []
+
         self.collidable_objects=[]
         # Create field and set color
         self.field = FootballField("Main Field", 1000, 700, (0,0,0,0),self.OFF_SET)
@@ -27,9 +29,11 @@ class World:
         self.teams.append(self.team_b)
 
         # Create ball
-        self.ball = FootballBall(500, 500, mass=10)
-        self.objects.append(self.ball)
-        self.collidable_objects.append(self.ball)
+        ball = FootballBall(500, 500, mass=10)
+
+        self.balls.append(ball)
+        self.objects.append(ball)
+        self.collidable_objects.append(ball)
 
         # Create players
         self.add_player(FootballPLayer(
@@ -91,7 +95,7 @@ class World:
                 else:
                     self.player_controller.player_controller(dt, player)
 
-            self.player_controller.ball_controller(dt, self.ball)
+            self.player_controller.ball_controller(dt, self.balls)
 
             # Render view
             self.view.render()

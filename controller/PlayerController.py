@@ -32,5 +32,6 @@ class PlayerController:
 
 
 
-    def ball_controller(self,dt, ball):
-        ball.update(self.world, dt)
+    def ball_controller(self,dt, balls):
+        for ball in balls:
+            ball.update(self.world, dt)
