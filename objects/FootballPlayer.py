@@ -58,7 +58,7 @@ class FootballPLayer(Collidable):
         self.move_to(dt)
         self.handle_collisions(world.collidable_objects)
         self.snap_to_field(world)
-        self.try_kick_ball(world.ball)
+        self.try_kick_ball(world.balls)
 
     def snap_to_field(self,world):
         field = world.field
@@ -124,51 +124,51 @@ class FootballPLayer(Collidable):
         self.y += self.vel_y * dt
 
 
-    def try_kick_ball(self, ball):
-        # Compute vector from player to ball
-        dx = ball.x - self.x
-        dy = ball.y - self.y
-        dist = math.hypot(dx, dy)
+    def try_kick_ball(self, balls):
+        for ball in balls:
+            dx = ball.x - self.x
+            dy = ball.y - self.y
+            dist = math.hypot(dx, dy)
 
-        if dist > self.radius + ball.radius:
-            return  # Too far to kick
+            if dist > self.radius + ball.radius:
+                return  # Too far to kick
 
-            # Player velocity magnitude (speed)
-        speed = math.hypot(self.vel_x, self.vel_y)
-        if speed == 0:
-            return  # Player not moving, no kick
+                # Player velocity magnitude (speed)
+            speed = math.hypot(self.vel_x, self.vel_y)
+            if speed == 0:
+                return  # Player not moving, no kick
 
-        # Normalize facing direction
-        fx, fy = self.facing_direction
-        facing_length = math.hypot(fx, fy)
-        if facing_length == 0:
-            return
-        fx /= facing_length
-        fy /= facing_length
+            # Normalize facing direction
+            fx, fy = self.facing_direction
+            facing_length = math.hypot(fx, fy)
+            if facing_length == 0:
+                return
+            fx /= facing_length
+            fy /= facing_length
 
-        # Normalize vector from player to ball
-        ball_dir_x = dx / dist
-        ball_dir_y = dy / dist
+            # Normalize vector from player to ball
+            ball_dir_x = dx / dist
+            ball_dir_y = dy / dist
 
-        # Calculate angle between facing direction and ball direction using dot product
-        dot = fx * ball_dir_x + fy * ball_dir_y
-        # Clamp dot product between -1 and 1 to avoid math domain error with acos
-        dot = max(min(dot, 1.0), -1.0)
+            # Calculate angle between facing direction and ball direction using dot product
+            dot = fx * ball_dir_x + fy * ball_dir_y
+            # Clamp dot product between -1 and 1 to avoid math domain error with acos
+            dot = max(min(dot, 1.0), -1.0)
 
-        # Angle in radians
-        angle = math.acos(dot)
+            # Angle in radians
+            angle = math.acos(dot)
 
-        # 60 degree cone means 30 degrees on each side of facing direction
-        # So accept if angle <= 30 degrees in radians
-        max_angle_rad = math.radians(30)
+            # 60 degree cone means 30 degrees on each side of facing direction
+            # So accept if angle <= 30 degrees in radians
+            max_angle_rad = math.radians(30)
 
-        if angle > max_angle_rad:
-            return  # Ball not in front cone
+            if angle > max_angle_rad:
+                return  # Ball not in front cone
 
-        # If all checks pass, kick the ball
-        kick_speed = self.strength * speed
-        ball.vel_x = ball_dir_x * kick_speed
-        ball.vel_y = ball_dir_y * kick_speed
+            # If all checks pass, kick the ball
+            kick_speed = self.strength * speed
+            ball.vel_x = ball_dir_x * kick_speed
+            ball.vel_y = ball_dir_y * kick_speed
 
     def draw(self, surface):
         pygame.draw.circle(surface, self.team.colour, (int(self.x), int(self.y)), self.radius-2)
