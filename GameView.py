@@ -1,16 +1,16 @@
 class GameView:
-    def __init__(self, screen, field, players):
+    def __init__(self, screen, world):
         self.screen = screen
-        self.field = field
-        self.players = players  # list of players
+        self.world = world
+
 
     def render(self):
         # Fill background
-        self.screen.fill(self.field.colour)
-
-        # Draw field
-        self.field.draw(self.screen)
-
+        self.screen.fill(self.world.field.colour)  # Grass background
+        counter = 0
+        for team in self.world.teams:
+            team.draw(self.screen,(counter,0))
+            counter+= 300
         # Draw all players
-        for player in self.players:
-            player.draw(self.screen)
+        for object in self.world.objects:
+            object.draw(self.screen)

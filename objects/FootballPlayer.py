@@ -10,10 +10,13 @@ class FootballPLayer:
     BASE_STAMINA_RECOVER = 6
     BASE_STAMINA_LOWEST = -50#Player wont move after this
     BASE_SPEED_REDUCE_RATE = 0.99
-    def __init__(self, name, x, y, team, acceleration, run_speed, walk_speed, strength, duration, dex, mass = 60):
+    def __init__(self, name, x, y, team, acceleration, run_speed, walk_speed, strength, duration, dex, mass = 60,is_bot=True):
         self.name = name
+        self.is_bot = is_bot
         self.x = x
         self.y = y
+
+        self.facing_direction = (1,1)
 
         self.team = team
 
@@ -52,8 +55,19 @@ class FootballPLayer:
     def update(self,world, dt, dx, dy): #dx=-1 left, dý = down
         self.update_stamina(dt,dx,dy)
         self.update_speed(dt,dx,dy)
-        self.move_to( dt)
+        self.move_to(dt)
         self.handle_collisions(world.players)
+        self.snap_to_field(world)
+        self.try_kick_ball(world.ball)
+
+    def snap_to_field(self,world):
+        field = world.field
+
+        self.x = max(field.offset + self.radius,
+                       min(field.offset + field.length - self.radius, self.x))
+
+        self.y = max(field.offset + self.radius,
+                       min(field.offset + field.width - self.radius, self.y))
     def update_speed(self,dt,dx,dy):
         if dx == 0:
             self.vel_x *= self.BASE_SPEED_REDUCE_RATE
@@ -93,6 +107,8 @@ class FootballPLayer:
             self.vel_y *= scale
         if abs(self.vel_x) < 0.1: self.vel_x = 0
         if abs(self.vel_y) < 0.1: self.vel_y = 0
+        if self.vel_x != 0 or self.vel_y != 0:
+            self.facing_direction = (self.vel_x,self.vel_y)
 
     def update_stamina(self,dt,dx,dy):
         if dx == 0 and dy == 0:
@@ -107,18 +123,6 @@ class FootballPLayer:
         self.x += self.vel_x * dt
         self.y += self.vel_y * dt
 
-    def draw(self, surface):
-        pygame.draw.circle(surface, self.team.colour, (int(self.x), int(self.y)), self.radius-2)
-        line_length = 30  # Length of the line
-        speed = math.hypot(self.vel_x, self.vel_y)
-        if speed > 0.1:  # Only draw if player is moving
-            dx = self.vel_x / speed
-            dy = self.vel_y / speed
-            end_x = self.x + dx * line_length
-            end_y = self.y + dy * line_length
-
-            # Draw the line
-            pygame.draw.line(surface, (255, 255, 255), (int(self.x), int(self.y)), (int(end_x), int(end_y)), 2)
     def handle_collisions(self, all_players):
         for other_player in all_players:
             if other_player is self:  # Don't collide with self
@@ -189,3 +193,38 @@ class FootballPLayer:
                 self.vel_y *= damping_factor
                 other_player.vel_x *= damping_factor
                 other_player.vel_y *= damping_factor
+
+    def try_kick_ball(self, ball):
+        # Compute vector from player to ball
+        dx = ball.x - self.x
+        dy = ball.y - self.y
+        dist = math.hypot(dx, dy)
+
+        if dist > self.radius + ball.radius:
+            return  # Too far to kick
+
+        fx, fy = self.facing_direction
+        facing_length = math.hypot(fx, fy)
+        if facing_length == 0:
+            return
+
+        fx /= facing_length
+        fy /= facing_length
+        if dist == 0:
+            return
+        ball_dir_x = dx / dist
+        ball_dir_y = dy / dist
+
+        last_speed = math.hypot(self.vel_x, self.vel_y)
+        kick_speed = self.strength * last_speed
+        ball.vel_x = ball_dir_x * kick_speed
+        ball.vel_y = ball_dir_y * kick_speed
+
+    def draw(self, surface):
+        pygame.draw.circle(surface, self.team.colour, (int(self.x), int(self.y)), self.radius-2)
+        line_length = 30
+        last_direction_x, last_direction_y = self.facing_direction
+        end_x = self.x + last_direction_x * line_length/300
+        end_y = self.y + last_direction_y * line_length/300
+
+        pygame.draw.line(surface, (255, 255, 255), (int(self.x), int(self.y)), (int(end_x), int(end_y)), 2)
