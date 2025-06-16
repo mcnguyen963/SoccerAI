@@ -1,7 +1,7 @@
 import math
 import pygame
-
-class FootballBall:
+from .Collidable import Collidable
+class FootballBall(Collidable):
     FRICTION = 0.995 # friction slows down the ball each update
 
     def __init__(self, x, y, radius=10, mass=100, colour=(255, 255, 255)):
@@ -18,6 +18,8 @@ class FootballBall:
         self.update_position(dt)
         self.check_bouncing(world.field)
         self.update_speed(dt)
+        self.handle_collisions(world.collidable_objects)
+
     def update_position(self,dt):
         self.x += self.vel_x * dt
         self.y += self.vel_y * dt
@@ -43,5 +45,6 @@ class FootballBall:
     def update_speed(self, dt):
         self.vel_x *= self.FRICTION
         self.vel_y *= self.FRICTION
+
     def draw(self, surface):
         pygame.draw.circle(surface, self.colour, (int(self.x), int(self.y)), self.radius)

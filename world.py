@@ -13,6 +13,7 @@ class World:
         self.objects=[]
         self.players = []
         self.teams=[]
+        self.collidable_objects=[]
         # Create field and set color
         self.field = FootballField("Main Field", 1000, 700, (0,0,0,0),self.OFF_SET)
         self.field.colour = (0, 0, 0)
@@ -26,8 +27,9 @@ class World:
         self.teams.append(self.team_b)
 
         # Create ball
-        self.ball = FootballBall(500, 500)
+        self.ball = FootballBall(500, 500, mass=10)
         self.objects.append(self.ball)
+        self.collidable_objects.append(self.ball)
 
         # Create players
         self.add_player(FootballPLayer(
@@ -39,7 +41,7 @@ class World:
             walk_speed=300,
             strength=1.5,
             duration=10,
-            dex=0.8, mass = 6000
+            dex=0.8, mass = 60
         ))
         self.add_player(FootballPLayer(
             "Player 2", 600, 500,
@@ -49,7 +51,7 @@ class World:
             walk_speed=2.5,
             strength=1.9,
             duration=1.3,
-            dex=0.7, mass = 10
+            dex=0.7, mass = 60
         ))
 
         # Controllers
@@ -70,6 +72,7 @@ class World:
     def add_player(self, player):
         self.players.append(player)
         self.objects.append(player)
+        self.collidable_objects.append(player)
 
 
     def run(self):
