@@ -5,6 +5,8 @@ from objects.FootballTeam import FootballTeam
 from objects.FootballBall import FootballBall
 from controller.PlayerController import PlayerController
 from GameView import GameView
+import csv
+
 import math
 class World:
     OFF_SET = 50 #SPACING FROM TOP RIGHT
@@ -35,49 +37,50 @@ class World:
         self.objects.append(ball)
         self.collidable_objects.append(ball)
 
-        # Create players
-        self.add_player(FootballPLayer(
-            "Player 1", 400, 500,
-            team=self.team_a,
-            acceleration=7,
-            is_bot = False,
-            run_speed=500,
-            walk_speed=300,
-            strength=1.5,
-            duration=10,
-            dex=0.8, mass = 60
-        ))
-        self.add_player(FootballPLayer(
-            "Player 2", 600, 500,
-            team=self.team_b,
-            acceleration=0.6,
-            run_speed=4.5,
-            walk_speed=2.5,
-            strength=1.9,
-            duration=1.3,
-            dex=0.7, mass = 60
-        ))
+        self.add_player_from_file()
 
-        # Controllers
+
         self.player_controller = PlayerController(self)
 
-        # Pygame screen setup
         self.screen = pygame.display.set_mode((self.field.length+self.OFF_SET*2, self.field.width+self.OFF_SET*2))
-        pygame.display.set_caption("Modular Drawing with View")
+        pygame.display.set_caption("Soccer game")
 
-        # View
         self.view = GameView(self.screen, self)
 
-        # Clock
         self.clock = pygame.time.Clock()
 
-        # Running flag
         self.running = True
     def add_player(self, player):
         self.players.append(player)
         self.objects.append(player)
         self.collidable_objects.append(player)
+    def add_player_from_file(self, file_path="data/players.txt"):
+        try:
+            with open(file_path, newline='') as csvfile:
+                reader = csv.DictReader(csvfile)
+                for row in reader:
 
+                    player = FootballPLayer(
+                        name=row["name"],
+                        x=float(row["x"]),
+                        y=float(row["y"]),
+                        team=self.team_b if row["team_name"] == self.team_b.name else self.team_a,
+                        acceleration=float(row["acceleration"]),
+                        run_speed=float(row["run_speed"]),
+                        walk_speed=float(row["walk_speed"]),
+                        strength=float(row["strength"]),
+                        duration=float(row["duration"]),
+                        dex=float(row["dex"]),
+                        mass=float(row["mass"]),
+                        is_bot=row["is_bot"].lower() == "true"
+                    )
+
+                    self.add_player(player)
+
+        except FileNotFoundError:
+            print(f"File {file_path} not found.")
+        except Exception as e:
+            print(f"Error loading players from file: {e}")
 
     def run(self):
         while self.running:
