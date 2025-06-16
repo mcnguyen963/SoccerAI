@@ -1,8 +1,8 @@
 import pygame
 import sys
 import math
-
-class FootballPLayer:
+from .Collidable import Collidable
+class FootballPLayer(Collidable):
     EXHAUST_PENALTY_FACTOR = 0.5
     BASE_STAMINA = 100
     BASE_STAMINA_REDUCE_RUNNING = 10
@@ -56,7 +56,7 @@ class FootballPLayer:
         self.update_stamina(dt,dx,dy)
         self.update_speed(dt,dx,dy)
         self.move_to(dt)
-        self.handle_collisions(world.players)
+        self.handle_collisions(world.collidable_objects)
         self.snap_to_field(world)
         self.try_kick_ball(world.ball)
 
@@ -123,76 +123,6 @@ class FootballPLayer:
         self.x += self.vel_x * dt
         self.y += self.vel_y * dt
 
-    def handle_collisions(self, all_players):
-        for other_player in all_players:
-            if other_player is self:  # Don't collide with self
-                continue
-
-            dx = self.x - other_player.x
-            dy = self.y - other_player.y
-            distance = math.hypot(dx, dy)
-            min_distance = self.radius + other_player.radius
-
-            if distance < min_distance and distance != 0:
-                # Collision detected!
-                # 1. Resolve overlap (push them apart)
-                overlap = min_distance - distance
-                # Move both players away from each other proportionally to their masses, or simply half each
-                # For simplicity, let's just push them equally apart along the collision normal
-                # This prevents them from getting stuck, but can look a bit "jerky"
-                correction_x = dx / distance * overlap * 0.5
-                correction_y = dy / distance * overlap * 0.5
-
-                self.x += correction_x
-                self.y += correction_y
-                other_player.x -= correction_x
-                other_player.y -= correction_y
-
-                # 2. Resolve velocities (elastic collision)
-                # Unit normal vector
-                nx = dx / distance
-                ny = dy / distance
-
-                # Unit tangent vector
-                tx = -ny
-                ty = nx
-
-                # Project velocities onto the normal and tangent vectors
-                # Player 1 (self)
-                v1n = self.vel_x * nx + self.vel_y * ny
-                v1t = self.vel_x * tx + self.vel_y * ty
-
-                # Player 2 (other_player)
-                v2n = other_player.vel_x * nx + other_player.vel_y * ny
-                v2t = other_player.vel_x * tx + other_player.vel_y * ty
-
-                # Calculate new normal velocities (1D elastic collision formula)
-                # v_final1 = (v1n * (m1 - m2) + 2 * m2 * v2n) / (m1 + m2)
-                # v_final2 = (v2n * (m2 - m1) + 2 * m1 * v1n) / (m1 + m2)
-                # Assuming equal mass for simplicity (m1=m2=m), this simplifies:
-                # v_final1 = v2n
-                # v_final2 = v1n
-                # If masses are different:
-                m1 = self.mass
-                m2 = other_player.mass
-
-                v1n_final = (v1n * (m1 - m2) + 2 * m2 * v2n) / (m1 + m2)
-                v2n_final = (v2n * (m2 - m1) + 2 * m1 * v1n) / (m1 + m2)
-
-                # Convert scalar normal and tangent velocities back to vectors
-                self.vel_x = v1n_final * nx + v1t * tx
-                self.vel_y = v1n_final * ny + v1t * ty
-
-                other_player.vel_x = v2n_final * nx + v2t * tx
-                other_player.vel_y = v2n_final * ny + v2t * ty
-
-                # Add a small damping to prevent infinite bouncing or
-                # to simulate some energy loss (optional)
-                damping_factor = 1
-                self.vel_x *= damping_factor
-                self.vel_y *= damping_factor
-                other_player.vel_x *= damping_factor
-                other_player.vel_y *= damping_factor
 
     def try_kick_ball(self, ball):
         # Compute vector from player to ball
@@ -203,20 +133,40 @@ class FootballPLayer:
         if dist > self.radius + ball.radius:
             return  # Too far to kick
 
+            # Player velocity magnitude (speed)
+        speed = math.hypot(self.vel_x, self.vel_y)
+        if speed == 0:
+            return  # Player not moving, no kick
+
+        # Normalize facing direction
         fx, fy = self.facing_direction
         facing_length = math.hypot(fx, fy)
         if facing_length == 0:
             return
-
         fx /= facing_length
         fy /= facing_length
-        if dist == 0:
-            return
+
+        # Normalize vector from player to ball
         ball_dir_x = dx / dist
         ball_dir_y = dy / dist
 
-        last_speed = math.hypot(self.vel_x, self.vel_y)
-        kick_speed = self.strength * last_speed
+        # Calculate angle between facing direction and ball direction using dot product
+        dot = fx * ball_dir_x + fy * ball_dir_y
+        # Clamp dot product between -1 and 1 to avoid math domain error with acos
+        dot = max(min(dot, 1.0), -1.0)
+
+        # Angle in radians
+        angle = math.acos(dot)
+
+        # 60 degree cone means 30 degrees on each side of facing direction
+        # So accept if angle <= 30 degrees in radians
+        max_angle_rad = math.radians(30)
+
+        if angle > max_angle_rad:
+            return  # Ball not in front cone
+
+        # If all checks pass, kick the ball
+        kick_speed = self.strength * speed
         ball.vel_x = ball_dir_x * kick_speed
         ball.vel_y = ball_dir_y * kick_speed
 
