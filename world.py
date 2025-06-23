@@ -10,7 +10,7 @@ import csv
 import math
 class World:
     OFF_SET = 50 # SPACING FROM TOP RIGHT
-    TARGET_GOAL_VALUE = 1 # value determine the vicotry team
+    TARGET_GOAL_VALUE = 10 # value determine the vicotry team
     MAX_GAME_DURATION = 180  # seconds
 
     def __init__(self):
@@ -71,7 +71,7 @@ class World:
                         run_speed=float(row["run_speed"]),
                         walk_speed=float(row["walk_speed"]),
                         strength=float(row["strength"]),
-                        duration=float(row["duration"]),
+                        stamina=float(row["stamina"]),
                         dex=float(row["dex"]),
                         mass=float(row["mass"]),
                         is_bot=row["is_bot"].lower() == "true"
