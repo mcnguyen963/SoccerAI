@@ -15,6 +15,7 @@ class FootballPLayer(Collidable):
     BASE_SPEED_REDUCE_RATE = 0.95# friction cause player to stop if no control is given
     # how big player are
     STOPPING_SPEED = 0.05 # if player's speed below this part they will be stop
+
     def __init__(self, name, x, y, team, acceleration, run_speed, walk_speed, strength, stamina, dex, mass = 60,is_bot=True,radius =20,window_scale = 1):
         # value that player can change
         self.name = name
@@ -40,6 +41,7 @@ class FootballPLayer(Collidable):
         self.is_running = False
         self.facing_direction = (1,1)
         self.is_exhausted = False
+
 
     def apply_exhaustion_penalty(self, stats):
         if self.stamina < self.STAMINA_LOWEST_VALUE:
@@ -176,7 +178,7 @@ class FootballPLayer(Collidable):
             ball.vel_y = ball_dir_y * kick_speed
 
     def draw(self, surface):
-        pygame.draw.circle(surface, self.team.colour, (int(self.x), int(self.y)), self.radius - 2)
+        pygame.draw.circle(surface, self.team.colour, (int(self.x), int(self.y)), self.radius)
         line_length = 30*self.window_scale
         last_direction_x, last_direction_y = self.facing_direction
         end_x = self.x + last_direction_x * line_length/300
