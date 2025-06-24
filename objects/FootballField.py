@@ -1,11 +1,12 @@
 import pygame
 class FootballField:
-    def __init__(self, name, length, width, colour= None, offset = 0):
+    def __init__(self, name, length, width, colour= (255,255,255), offset = 0, scale = 1):
         self.name = name
         self.length = length
         self.width = width
         self.colour = colour
-        self.offset = offset
+        self.offset = offset*scale
+        self.scale =scale
 
         self.goal_width = self.width // 4
         self.goal_y_start = (self.width - self.goal_width) // 2 + self.offset

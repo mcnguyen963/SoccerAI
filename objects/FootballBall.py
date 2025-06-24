@@ -5,17 +5,18 @@ class FootballBall(Collidable):
     FRICTION = 0.993 # friction slows down the ball each update
     BOUNCING_FACTOR_FIELD= 0.9
     BOUNCING_FACTOR_GOAL = 0.5
-    def __init__(self, x, y, radius=10, mass=100, colour=(255, 255, 255)):
+    def __init__(self, x, y, radius=10, mass=100, colour=(253, 253, 253),window_scale = 1):
         self.starting_x = x
         self.starting_y = y
         self.x = x
         self.y = y
-        self.radius = radius
         self.mass = mass
         self.colour = colour
-
+        self.window_scale = window_scale
         self.vel_x = 0
         self.vel_y = 0
+        self.radius = radius * window_scale
+
 
     def update(self, world, dt):
         self.update_position(dt)
@@ -26,8 +27,8 @@ class FootballBall(Collidable):
         self.handle_collisions(world.collidable_objects)
 
     def update_position(self,dt):
-        self.x += self.vel_x * dt
-        self.y += self.vel_y * dt
+        self.x += self.vel_x * dt*self.window_scale
+        self.y += self.vel_y * dt*self.window_scale
     def check_bouncing(self,field,world):
         left = field.offset
         right = field.offset + field.length
