@@ -92,8 +92,6 @@ class World:
     def run(self):
 
         start_time = pygame.time.get_ticks()#start_time
-        time_from_start = start_time
-        is_print= True
         while self.running and self.get_winning_team() is None:
             dt = self.clock.tick(self.TARGET_FPS) / 1000.0  # calculate time per frame
 
@@ -108,15 +106,10 @@ class World:
 
             # Call the controller for each player to get their action per frame
             for player in self.players:
-                # if player.is_bot:
-                #     self.player_controller.bot_controller(dt, player)
-                # else:
-                #     self.player_controller.player_controller(dt, player)
-                player.update(self, dt, -1, 0)
-                time_from_start+=dt
-                if player.x == player.radius and is_print:
-                    print(time_from_start)
-                    is_print = False
+                if player.is_bot:
+                    self.player_controller.bot_controller(dt, player)
+                else:
+                    self.player_controller.player_controller(dt, player)
 
             self.player_controller.ball_controller(dt, self.balls)
             # Render view
