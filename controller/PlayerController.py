@@ -23,6 +23,7 @@ class PlayerController:
         if keys[pygame.K_DOWN] or keys[pygame.K_s]:
             dy = 1
         player.update(self.world, dt, dx, dy)
+        print(self.world.get_reward(player))
 
     def bot_controller(self, dt, player):
         ball = self.world.balls[0]
