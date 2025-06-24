@@ -15,24 +15,25 @@ class FootballPLayer(Collidable):
     BASE_SPEED_REDUCE_RATE = 0.95# friction cause player to stop if no control is given
     # how big player are
     STOPPING_SPEED = 0.05 # if player's speed below this part they will be stop
-    def __init__(self, name, x, y, team, acceleration, run_speed, walk_speed, strength, stamina, dex, mass = 60,is_bot=True,radius =20):
+    def __init__(self, name, x, y, team, acceleration, run_speed, walk_speed, strength, stamina, dex, mass = 60,is_bot=True,radius =20,window_scale = 1):
         # value that player can change
         self.name = name
         self.is_bot = is_bot
         self.x = x
         self.y = y
         self.team = team
+        self.window_scale = window_scale
 
         self.acceleration = acceleration # determent how fast the player can change speed or direction
         self.walk_speed = walk_speed # determent normal run speed
-        self.run_speed = run_speed  # determent the max speed player
+        self.run_speed = run_speed # determent the max speed player
         self.strength = strength # determent the kick speed
 
         self.MAX_STAMINA = stamina
         self.stamina = stamina
         self.dex = dex # this will determent
         self.mass = mass
-        self.radius = radius
+        self.radius = radius*window_scale
         # innit value
         self.vel_x = 0
         self.vel_y = 0
@@ -123,8 +124,9 @@ class FootballPLayer(Collidable):
             self.stamina -= self.BASE_STAMINA_REDUCE_WALKING * dt
 
     def move_to(self, dt):
-        self.x += self.vel_x * dt
-        self.y += self.vel_y * dt
+        # print(abs(self.vel_x*self.window_scale)*dt,self.vel_x*self.window_scale)
+        self.x += self.vel_x * dt*self.window_scale
+        self.y += self.vel_y * dt*self.window_scale
 
 
     def try_kick_ball(self, balls):
@@ -175,7 +177,7 @@ class FootballPLayer(Collidable):
 
     def draw(self, surface):
         pygame.draw.circle(surface, self.team.colour, (int(self.x), int(self.y)), self.radius - 2)
-        line_length = 30
+        line_length = 30*self.window_scale
         last_direction_x, last_direction_y = self.facing_direction
         end_x = self.x + last_direction_x * line_length/300
         end_y = self.y + last_direction_y * line_length/300
