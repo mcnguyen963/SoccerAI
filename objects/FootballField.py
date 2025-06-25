@@ -1,5 +1,6 @@
 import pygame
-class FootballField:
+from .Drawable import Drawable
+class FootballField(Drawable):
     def __init__(self, name, length, width, colour= (255,255,255), offset = 0, scale = 1):
         self.name = name
         self.length = length

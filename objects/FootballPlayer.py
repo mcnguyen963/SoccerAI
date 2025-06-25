@@ -2,10 +2,11 @@ import pygame
 import sys
 import math
 from .Collidable import Collidable
+from .Drawable import Drawable
 import enum
 
 
-class FootballPLayer(Collidable):
+class FootballPLayer(Collidable,Drawable):
     EXHAUST_PENALTY_FACTOR = 0.5
     BASE_STAMINA_REDUCE_RUNNING = 6
     BASE_STAMINA_REDUCE_WALKING = 5

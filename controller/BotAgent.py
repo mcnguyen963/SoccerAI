@@ -1,5 +1,5 @@
 # IMPORT GAME
-from testing import World
+from FootBallGameEnv import FootBallGameEnv
 
 # IMPORT JOYPAD WRAPPER
 from nes_py.wrappers import JoypadSpace
@@ -12,6 +12,7 @@ from stable_baselines3.common.vec_env import VecFrameStack, DummyVecEnv
 
 from matplotlib import pyplot as plt
 import os
+import numpy as np
 
 from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import BaseCallback
@@ -32,24 +33,20 @@ SIMPLE_MOVEMENT = [
     ['down', 'right']
 ]
 
-CHECKPOINT_DIR = './train/'
-LOG_DIR = './logs/'
+CHECKPOINT_DIR = '/Volumes/Untitled/xoa/aidatalog/train/'
+LOG_DIR = '/Volumes/Untitled/xoa/aidatalog/logs'
 
 class BotAgent:
-    def create_game_wrapper(self):
-        env = World()
-        env.run()
-        # env.reset()
-        # state, reward, done, info = env.step([env.action_space.sample()])
-        # env = GrayScaleObservation(env,keep_dim=True)
-        # # 4. Wrap inside the Dummy Environment
+    def train(self):
+        env = FootBallGameEnv()
+        # 4. Wrap inside the Dummy Environment
         # env = DummyVecEnv([lambda: env])
-        # # 5. Stack the frames
-        # env = VecFrameStack(env, 4, channels_order='last')
-        # callback = TrainAndLoggingCallback(check_freq=10000, save_path=CHECKPOINT_DIR)
-        # model = PPO('CnnPolicy', env, verbose=1, learning_rate=0.000001,
-        #             n_steps=512)
-        # model.learn(total_timesteps=10001, callback=callback)
+        # 5. Stack the frames
+        model = PPO('MlpPolicy', env, verbose=1, tensorboard_log=LOG_DIR, learning_rate=0.000001,
+                    n_steps=640)
+
+        #
+        model.learn(total_timesteps=500000)
 
 
 class TrainAndLoggingCallback(BaseCallback):
@@ -70,4 +67,4 @@ class TrainAndLoggingCallback(BaseCallback):
 
         return True
 batagen= BotAgent()
-batagen.create_game_wrapper()
+batagen.train()

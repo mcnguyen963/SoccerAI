@@ -95,11 +95,11 @@ class World(gym.Env):
                         y=random.randint(int(self.OFF_SET * self.SCALE),
                                          int(self.field.width + self.OFF_SET * self.SCALE)),
                         team=self.team_b if row["team_name"] == self.team_b.name else self.team_a,
-                        acceleration=float(row["acceleration"]),
-                        run_speed=float(row["run_speed"]),
-                        walk_speed=float(row["walk_speed"]),
-                        strength=float(row["strength"]),
-                        stamina=float(row["stamina"]),
+                        acceleration=float(600*random.randint(100,110)/100),
+                        run_speed=float(600*random.randint(100,110)/100),
+                        walk_speed=float(800*random.randint(100,110)/100),
+                        strength=float(random.randint(100,200)/100),
+                        stamina=float(300*random.randint(100,200)/100),
                         dex=float(row["dex"]),
                         mass=float(row["mass"]),
                         is_bot=row["is_bot"].lower() == "true",
@@ -214,17 +214,7 @@ class World(gym.Env):
     def step(self, action, player_index = 0):
         default_player = self.players[player_index]
         dt = self.clock.tick(self.TARGET_FPS) / 1000.0
-        SIMPLE_MOVEMENT = [
-            ['NOOP'],
-            ['left'],
-            ['right'],
-            ['up'],
-            ['down'],
-            ['up', 'left'],
-            ['up', 'right'],
-            ['down', 'left'],
-            ['down', 'right']
-        ]
+
         dx, dy = 0, 0
         if action == 1:  # left
             dx = -1

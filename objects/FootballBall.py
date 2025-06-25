@@ -1,7 +1,8 @@
 import math
 import pygame
 from .Collidable import Collidable
-class FootballBall(Collidable):
+from .Drawable import Drawable
+class FootballBall(Collidable,Drawable):
     FRICTION = 0.993 # friction slows down the ball each update
     BOUNCING_FACTOR_FIELD= 0.9
     BOUNCING_FACTOR_GOAL = 0.5
