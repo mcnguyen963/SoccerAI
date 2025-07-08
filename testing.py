@@ -17,10 +17,11 @@ class World(gym.Env):
     OFF_SET = 50  # SPACING FROM TOP RIGHT
     TARGET_GOAL_VALUE = 10  # value determine the vicotry team
     MAX_GAME_DURATION = 180  # seconds
-    SCALE = 1
+    SCALE = 0.25
     WINDOW_LENGTH = 1080
     WINDOW_WIDTH = 720
-    TARGET_FPS = 120
+    TARGET_FPS = 60
+    EPISODE = 3600
     # gym env attribute
     metadata = {"render.modes": ["human", "rgb_array"], "video.frames_per_second": TARGET_FPS}
     continuous = True
@@ -77,13 +78,14 @@ class World(gym.Env):
             shape=(obs_height, obs_width, 3),  # (H, W, C)
             dtype=np.uint8
         )
+        self.frame_count = 0
 
     def add_player(self, player):
         self.players.append(player)
         self.objects.append(player)
         self.collidable_objects.append(player)
 
-    def add_player_from_file(self, file_path="/Users/nguyen/PycharmProjects/footballAI/data/players.txt"):
+    def add_player_from_file(self, file_path="F:/ai/SoccerAI/data/players.txt"):
         try:
             with open(file_path, newline='') as csvfile:
                 reader = csv.DictReader(csvfile)
@@ -94,7 +96,10 @@ class World(gym.Env):
                                          int(self.field.length + self.OFF_SET * self.SCALE)),
                         y=random.randint(int(self.OFF_SET * self.SCALE),
                                          int(self.field.width + self.OFF_SET * self.SCALE)),
-                        team=self.team_b if row["team_name"] == self.team_b.name else self.team_a,
+                        team=self.team_b if random.randint(1,2) == 1 else self.team_a,
+
+                        # # x=1,y=1,
+                        # team = self.team_b,
                         acceleration=float(row["acceleration"]),
                         run_speed=float(row["run_speed"]),
                         walk_speed=float(row["walk_speed"]),
@@ -207,8 +212,8 @@ class World(gym.Env):
         self.clock = pygame.time.Clock()
 
         self.running = True
-        self.view.render()
         pygame.display.flip()
+        self.frame_count = 0
         return self.render(mode="rgb_array")
 
     def step(self, action, player_index = 0):
@@ -250,14 +255,13 @@ class World(gym.Env):
         # Update game state
         default_player.update(self, dt, dx, dy)
         self.player_controller.ball_controller(dt, self.balls)
-        self.view.render()
 
         # Compute reward and check for terminal condition
         reward = self.get_reward(default_player)
-        done = self.get_winning_team() is not None
+        self.frame_count +=1
+        done = self.get_winning_team() is not None or self.frame_count >= 30*30
 
         # Render and get new observation (state)
-        self.render()
         state = self.render(mode="rgb_array")
 
         info = {
@@ -269,22 +273,26 @@ class World(gym.Env):
         return state, reward, done, info
     def get_reward(self, player):
         ball = self.balls[0]
-        target_goal_x = self.OFF_SET * self.SCALE+self.field.length
         player_team = self.team_b
         opponent_team = self.team_a
         if player.team.is_on_left_side:
             player_team = self.team_a
             opponent_team = self.team_b
-            target_goal_x = self.OFF_SET*self.SCALE
+            target_goal_x = self.OFF_SET * self.SCALE + self.field.length  # RIGHT goal
+        else:
+            player_team = self.team_b
+            opponent_team = self.team_a
+            target_goal_x = self.OFF_SET * self.SCALE 
 
         target_goal_y = (self.field.goal_y_end + self.field.goal_y_start)/2
-        distant_score = -1* math.dist([player.x,player.y],[ball.x,ball.y])
-        if player_team.is_on_left_side and player.x > ball.x or not player_team.is_on_left_side and player.x<ball.x:
-            distant_score -= self.field.length/2
+        distant_score = -1* math.dist([player.x,player.y],[ball.x,ball.y])/self.field.length
+            
 
-        k_value =distant_score
-        k_value += math.dist([ball.x,ball.y],[target_goal_x,target_goal_y])
-        k_value += self.field.length*(player_team.score-opponent_team.score)
+        k_value = distant_score
+        k_value -= math.dist([ball.x,ball.y],[target_goal_x,target_goal_y])/self.field.length
+        k_value += player_team.score-opponent_team.score
+        if player.is_stucked:
+            k_value -=0.5
         return k_value
     def close(self):
         pygame.quit()
@@ -301,8 +309,7 @@ class World(gym.Env):
             obs.extend([ball.x, ball.y])
 
         return np.array(obs, dtype=float)
-
-    def render(self, mode="human"):
+    def render(self, mode="rgb_array", *args, **kwargs):
         if mode == "human":
             self.view.render()
             pygame.display.flip()
@@ -317,5 +324,4 @@ class World(gym.Env):
             return frame
         else:
             raise NotImplementedError(f"Render mode {mode} not supported")
-
 
