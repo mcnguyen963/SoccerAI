@@ -1,2 +1,2 @@
 name,x,y,team_name,acceleration,run_speed,walk_speed,strength,stamina,dex,mass,is_bot
-Player 4,880,480,A Team,500,700,310,1.7,400,0.85,62,False
+Player 4,880,480,A Team,500,510,310,1.7,100,0.85,62,False

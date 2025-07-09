@@ -111,12 +111,15 @@ class FootBallGameEnv(gym.Env):
             target_goal_x = self.field.left_goal_pos[0]
         target_goal_y = (self.field.goal_y_end+self.field.goal_y_end)/2
         self.last_ball_goal_dist = math.dist([target_goal_x,target_goal_y],[self.balls[0].x,self.balls[0].y])
+
         if len(self.balls)>0:
             self.balls[0].update(self,dt)
         current_ball_goal_dist =  math.dist([target_goal_x,target_goal_y],[self.balls[0].x,self.balls[0].y])
         if current_ball_goal_dist< self.last_ball_goal_dist:
             reward +=1
-            
+        elif current_ball_goal_dist> self.last_ball_goal_dist:
+            reward -=1
+
         total_frame = self.TARGET_FPS*self.number_allowable_time_second
 
         if default_player.is_kicked_ball:

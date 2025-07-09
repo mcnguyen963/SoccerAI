@@ -7,6 +7,7 @@ import enum
 
 class FootballPLayer(Collidable):
     EXHAUST_PENALTY_FACTOR = 0.5
+<<<<<<< HEAD
     BASE_STAMINA_REDUCE_RUNNING = 0
     BASE_STAMINA_REDUCE_WALKING = 0
     BASE_STAMINA_RECOVER = 10
@@ -15,6 +16,16 @@ class FootballPLayer(Collidable):
     BASE_SPEED_REDUCE_RATE = 0.5# friction cause player to stop if no control is given
     # how big player are
     STOPPING_SPEED = 0.1 # if player's speed below this part they will be stop
+=======
+    BASE_STAMINA_REDUCE_RUNNING = 6
+    BASE_STAMINA_REDUCE_WALKING = 5
+    BASE_STAMINA_RECOVER = 4
+    STAMINA_PENALTY_VALUE = 0 #player run speed and acceleration will reduce if under this point
+    STAMINA_LOWEST_VALUE = -50 #Player won't be able to move after this
+    BASE_SPEED_REDUCE_RATE = 0.95# friction cause player to stop if no control is given
+    # how big player are
+    STOPPING_SPEED = 0.05 # if player's speed below this part they will be stop
+>>>>>>> f0bcc8d9c6327f5adfbb26d8ed304814ea18373b
 
     def __init__(self, name, x, y, team, acceleration, run_speed, walk_speed, strength, stamina, dex, mass = 60,is_bot=True,radius =20,window_scale = 1):
         # value that player can change
@@ -41,8 +52,11 @@ class FootballPLayer(Collidable):
         self.is_running = False
         self.facing_direction = (1,1)
         self.is_exhausted = False
+<<<<<<< HEAD
         self.is_stucked = False
         self.is_kicked_ball = False
+=======
+>>>>>>> f0bcc8d9c6327f5adfbb26d8ed304814ea18373b
 
 
     def apply_exhaustion_penalty(self, stats):
@@ -54,19 +68,28 @@ class FootballPLayer(Collidable):
         return stats
 
     def update(self,world, dt, dx, dy): #dx=-1 left, dý = down
+<<<<<<< HEAD
         self.is_stucked = False
         self.is_kicked_ball = False
         last_x, last_y = self.x,self.y
  
+=======
+
+>>>>>>> f0bcc8d9c6327f5adfbb26d8ed304814ea18373b
         self.update_stamina(dt,dx,dy)
         self.update_speed(dt,dx,dy)
         self.move_to(dt)
         self.snap_to_field(world)
         self.handle_collisions(world.collidable_objects)
         self.try_kick_ball(world.balls)
+<<<<<<< HEAD
         if abs(self.x - last_x) == 0 and abs(self.y - last_y) ==0:
             self.is_stucked = True
 
+=======
+
+
+>>>>>>> f0bcc8d9c6327f5adfbb26d8ed304814ea18373b
     def snap_to_field(self,world):
         field = world.field
 
@@ -180,6 +203,7 @@ class FootballPLayer(Collidable):
 
             # If all checks pass, kick the ball
             kick_speed = self.strength * speed
+<<<<<<< HEAD
             # ball.vel_x = ball_dir_x * kick_speed
             # ball.vel_y = ball_dir_y * kick_speed
             ball.vel_x=self.vel_x
@@ -194,3 +218,16 @@ class FootballPLayer(Collidable):
         # end_y = self.y + last_direction_y * line_length/300
 
         # pygame.draw.line(surface, (255, 255, 255), (int(self.x), int(self.y)), (int(end_x), int(end_y)), 2)
+=======
+            ball.vel_x = ball_dir_x * kick_speed
+            ball.vel_y = ball_dir_y * kick_speed
+
+    def draw(self, surface):
+        pygame.draw.circle(surface, self.team.colour, (int(self.x), int(self.y)), self.radius)
+        line_length = 30*self.window_scale
+        last_direction_x, last_direction_y = self.facing_direction
+        end_x = self.x + last_direction_x * line_length/300
+        end_y = self.y + last_direction_y * line_length/300
+
+        pygame.draw.line(surface, (255, 255, 255), (int(self.x), int(self.y)), (int(end_x), int(end_y)), 2)
+>>>>>>> f0bcc8d9c6327f5adfbb26d8ed304814ea18373b
