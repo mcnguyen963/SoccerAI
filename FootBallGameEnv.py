@@ -80,8 +80,7 @@ class FootBallGameEnv(gym.Env):
         self.running = True
         self.number_allowable_time_second = self.MAX_GAME_DURATION
         self.last_ball_dist = float('inf')
-
-
+        self.last_ball_goal_dist = self.field.length/2
         model_path = 'thisisatestmodel' 
         self.model = PPO.load(model_path)
         self.model.env = self
@@ -105,13 +104,19 @@ class FootBallGameEnv(gym.Env):
         if default_player.team.is_on_left_side:
             player_new_score = self.team_a.score
             opponent_new_score = self.team_b.score
+            target_goal_x = self.field.right_goal_pos[0]
         else:
             player_new_score = self.team_b.score
             opponent_new_score = self.team_a.score
-
+            target_goal_x = self.field.left_goal_pos[0]
+        target_goal_y = (self.field.goal_y_end+self.field.goal_y_end)/2
+        self.last_ball_goal_dist = math.dist([target_goal_x,target_goal_y],[self.balls[0].x,self.balls[0].y])
         if len(self.balls)>0:
             self.balls[0].update(self,dt)
-
+        current_ball_goal_dist =  math.dist([target_goal_x,target_goal_y],[self.balls[0].x,self.balls[0].y])
+        if current_ball_goal_dist< self.last_ball_goal_dist:
+            reward +=1
+            
         total_frame = self.TARGET_FPS*self.number_allowable_time_second
 
         if default_player.is_kicked_ball:
