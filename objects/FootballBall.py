@@ -55,6 +55,8 @@ class FootballBall(Collidable):
     def update_speed(self, dt):
         self.vel_x *= self.FRICTION
         self.vel_y *= self.FRICTION
+        if abs(self.vel_x) < 0.01: self.vel_x = 0
+        if abs(self.vel_y) < 0.01: self.vel_y = 0
 
     def draw(self, surface):
         pygame.draw.circle(surface, self.colour, (int(self.x), int(self.y)), self.radius)
@@ -72,7 +74,7 @@ class FootballBall(Collidable):
             else:
                 left_team = team
 
-        if goal_y_start <= self.y <= goal_y_end:
+        if goal_y_start + self.radius <= self.y <= goal_y_end - self.radius:
             if is_left:
                 right_team.score += 1
             else:

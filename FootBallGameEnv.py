@@ -17,11 +17,12 @@ import numpy as np
 class FootBallGameEnv(gym.Env):
     OFF_SET = 50  # SPACING FROM TOP RIGHT
     TARGET_GOAL_VALUE = 3 # value determine the vicotry team
-    MAX_GAME_DURATION = 120  # seconds
+    MAX_GAME_DURATION = 128  # seconds
     SCALE = 1
     WINDOW_LENGTH = 1080
     WINDOW_WIDTH = 720
     TARGET_FPS = 64
+    TOTAL_FRAMES = MAX_GAME_DURATION * TARGET_FPS
     def __init__(self,observation_mode = 'data'):
         self.action_space = spaces.Box(low=-1,
                                     high=1,  shape=(2,),
@@ -37,13 +38,14 @@ class FootBallGameEnv(gym.Env):
                 shape=(obs_height, obs_width, 3),
                 dtype=np.uint8
             )
+
         else:
             self.observation_space = spaces.Box(low=-10000,
                                     high=-10000,
                                     shape=(12,),
                                     dtype=np.float32)
             pygame.init()
-
+        
         self.objects = []
         self.players = []
         self.teams = []
@@ -73,99 +75,100 @@ class FootBallGameEnv(gym.Env):
         self.add_random_players()
 
         self.player_controller = PlayerController(self)
-        self.screen = pygame.display.set_mode(
-            (self.field.length + self.OFF_SET * 2 * self.SCALE, self.field.width + self.OFF_SET * 2 * self.SCALE))
+
         pygame.display.set_caption("Soccer game")
         self.clock = pygame.time.Clock()
         self.running = True
         self.number_allowable_time_second = self.MAX_GAME_DURATION
-        self.last_ball_dist = float('inf')
         self.last_ball_goal_dist = self.field.length/2
-        model_path = 'thisisatestmodel' 
-        self.model = PPO.load(model_path)
-        self.model.env = self
+        self.did_kicked_ball = False
+        self.last_scores = [0,0]
+        self.time_since_last_kicked = 0
 
-    def step(self, action,  player_index = 0):
+        # model_path = 'thisisatestmodel' 
+        # self.model = PPO.load(model_path)
+        # self.model.env = self
+        self.screen = None
+
+    def step(self, action, player_index=0):
         default_player = self.players[player_index]
-        dt = 1/self.TARGET_FPS
+        ball = None
+        if len(self.balls) >0:
+            ball = self.balls[0]
+        dx, dy = action
+        dt = 1 / self.TARGET_FPS
         self.number_allowable_time_second -= dt
-        dx, dy = action[0], action[1]
-        self.last_ball_dist = math.dist([default_player.x,default_player.y],[self.balls[0].x,self.balls[0].y])
-        if default_player.team.is_on_left_side:
-            player_last_score = self.team_a.score
-            opponent_last_score = self.team_b.score
-        else:
-            player_last_score = self.team_b.score
-            opponent_last_score = self.team_a.score
 
+        last_x, last_y = default_player.x, default_player.y
+        # old_player_ball_dist = math.dist([last_x, last_y],
+        #                             # [ball.x, ball.y])
         default_player.update(self, dt, dx, dy)
-        reward = self.get_reward(default_player)
-
+        player_ball_dist = math.dist([default_player.x, default_player.y],
+                                    [ball.x, ball.y])
         if default_player.team.is_on_left_side:
-            player_new_score = self.team_a.score
-            opponent_new_score = self.team_b.score
-            target_goal_x = self.field.right_goal_pos[0]
+            player_team = self.team_a
+            opponent_team = self.team_b
+            opponent_goal_x, opponent_goal_y_start, opponent_goal_y_end = self.field.right_goal_pos
         else:
-            player_new_score = self.team_b.score
-            opponent_new_score = self.team_a.score
-            target_goal_x = self.field.left_goal_pos[0]
-        target_goal_y = (self.field.goal_y_end+self.field.goal_y_end)/2
-        self.last_ball_goal_dist = math.dist([target_goal_x,target_goal_y],[self.balls[0].x,self.balls[0].y])
+            opponent_goal_x, opponent_goal_y_start, opponent_goal_y_end = self.field.left_goal_pos
+            player_team = self.team_b
+            opponent_team = self.team_a
 
-        if len(self.balls)>0:
-            self.balls[0].update(self,dt)
-        current_ball_goal_dist =  math.dist([target_goal_x,target_goal_y],[self.balls[0].x,self.balls[0].y])
-        if current_ball_goal_dist< self.last_ball_goal_dist:
-            reward +=1
-        elif current_ball_goal_dist> self.last_ball_goal_dist:
-            reward -=1
+        if ball.y< opponent_goal_y_start + ball.radius:
+            target_y = self.field.goal_y_start + ball.radius
+        elif  ball.y> opponent_goal_y_end - ball.radius:
+            target_y =   opponent_goal_y_end - ball.radius
+        else:
+            target_y =   (opponent_goal_y_end +opponent_goal_y_start)/2
+       
 
-        total_frame = self.TARGET_FPS*self.number_allowable_time_second
+        ball_goal_dist = math.dist([opponent_goal_x, target_y],
+                                [ball.x, ball.y])
 
+        reward = (
+            ( - (player_ball_dist + ball_goal_dist) / self.field.length)+
+            (-0.1 * (self.time_since_last_kicked / self.MAX_GAME_DURATION))   
+        ) / self.TOTAL_FRAMES
         if default_player.is_kicked_ball:
-            if default_player.team.is_on_left_side and default_player.x <self.balls[0].x or not default_player.team.is_on_left_side and default_player.x >self.balls[0].x:
-                reward += self.TARGET_FPS * 5
-            if self.balls[0].vel_x >0 and default_player.team.is_on_left_side:
-                reward += self.TARGET_FPS
-            elif self.balls[0].vel_x <0 and not default_player.team.is_on_left_side:
-                reward += self.TARGET_FPS
-
-        if player_new_score>player_last_score:
-            reward += max(total_frame/self.TARGET_GOAL_VALUE,3)
-            
-        if opponent_new_score>opponent_last_score:
-            x = self.TARGET_FPS*(self.MAX_GAME_DURATION-self.number_allowable_time_second)
-            reward -= max(x/self.TARGET_GOAL_VALUE,3)
-
-        # for each other aciton/
-        # update them
-        # player2 = self.players[1]
-        # # dx,dy = self.get_model_action(player2)
-        # player2.update(self,dt,random.uniform(-1,1),random.uniform(-1,1))
-
-
-        # Compute reward and check for terminal condition
-
-        # self.player_controller.bot_controller(dt,player2)
-
-        if self.observation_mode == "visual":
-            state = self.render(mode="rgb_array")  # H×W×3 frame
+            reward += 0.1
+        if abs(ball.vel_x) > 1:
+            self.time_since_last_kicked = 0
+            ball_speed = math.hypot(self.balls[0].vel_x, self.balls[0].vel_y)
+            reward += (1/(self.TARGET_GOAL_VALUE*3) * self.get_ball_score(default_player,ball)* max(min(ball_speed/default_player.walk_speed,1),0.01))/ self.TOTAL_FRAMES
         else:
-            state = self.get_state(default_player)
+            self.time_since_last_kicked += dt
 
+        last_player_team_score = player_team.score
+        last_opponent_team_score = opponent_team.score
+
+        # Update ball position
+        if len(self.balls) > 0:
+            self.balls[0].update(self, dt)
+
+
+        new_player_team_score = player_team.score
+        new_opponent_team_score = opponent_team.score
+
+        if new_player_team_score > last_player_team_score:
+            reward += 1/(self.TARGET_GOAL_VALUE) * max(0.5, self.number_allowable_time_second / self.MAX_GAME_DURATION)
+        elif new_opponent_team_score > last_opponent_team_score:
+            reward -=  1/(self.TARGET_GOAL_VALUE) * max(0.5, (self.MAX_GAME_DURATION - self.number_allowable_time_second) / self.MAX_GAME_DURATION)
+
+        # Winning bonus
+        if self.get_winning_team() is not None:
+            if self.get_winning_team() == default_player.team:
+                reward += 2 * max(0.5, self.number_allowable_time_second / self.MAX_GAME_DURATION)
+            else:
+                reward -= 2 * max(0.5, (self.MAX_GAME_DURATION - self.number_allowable_time_second) / self.MAX_GAME_DURATION)
+        reward = reward *100
+        # Observation, done, info
+        state = self.render(mode="rgb_array") if self.observation_mode == "visual" else self.get_state(default_player)
         done = self.get_winning_team() is not None or self.number_allowable_time_second <= 0
-
         info = {
             "player_position": (default_player.x, default_player.y),
             "ball_count": len(self.balls),
             "winning_team": self.get_winning_team()
         }
-        if self.get_winning_team() is not None:
-            if self.get_winning_team == default_player.team:
-                reward += max(total_frame,10)
-            else:
-                reward -= max(total_frame,10)
-
         return state, reward, done, info
 
     def render(self, mode="human"):
@@ -205,7 +208,10 @@ class FootBallGameEnv(gym.Env):
         self.add_random_players()
         self.running = True
         self.number_allowable_time_second = self.MAX_GAME_DURATION
-        self.last_ball_dist =  math.dist([self.balls[0].x,self.balls[0].y],[ self.players[0].x, self.players[0].y])
+        self.last_ball_goal_dist = self.field.length/2
+        self.did_kicked_ball = False
+        self.last_scores = [0,0]
+        self.time_since_last_kicked = 0
         return self.get_state(self.players[0])
 
     # update the visual for the game
@@ -235,9 +241,9 @@ class FootBallGameEnv(gym.Env):
             y=random.randint(int(self.OFF_SET * self.SCALE+self.field.width/3),
                              int(self.field.width*2/3 + self.OFF_SET * self.SCALE)),
             team=team,
-            acceleration=400 , #float(400 * random.uniform(0.8, 1.1)),
+            acceleration=200 , #float(400 * random.uniform(0.8, 1.1)),
             run_speed=600, #float(600 * random.uniform(0.8, 1.1)),
-            walk_speed=800,#float(800 * random.uniform(0.8, 1.1)),
+            walk_speed=300,#float(800 * random.uniform(0.8, 1.1)),
             strength=1, #float(random.uniform(1, 1.9)),
             stamina=3000000, #float(3000000 * random.uniform(1, 1.3)),
             dex=float(random.uniform(1, 1.3)),
@@ -257,47 +263,55 @@ class FootBallGameEnv(gym.Env):
             # self.add_player(player)
 
     def get_reward(self, player) -> float:
-        reward_value =-1
-        ball = self.balls[0]
-        current_distant = math.dist([player.x,player.y],[ball.x,ball.y])
-        if self.last_ball_dist-current_distant<-2:
-            reward_value+=0.5
-        elif self.last_ball_dist-current_distant>2:
-            reward_value-=0.5
-        else:
-            reward_value-=1
-    
-        # if player.team.is_on_left_side:
-        #     # player_team = self.team_a
-        #     # opponent_team = self.team_b
-        #     ball_dir_score = 0.25 if ball.vel_x >0 else 0
-        #     # target_goal_x = self.field.right_goal_pos[0]
-        # else:
-        #     # player_team = self.team_b
-        #     # opponent_team = self.team_a
-        #     # target_goal_x = self.field.left_goal_pos[0]
-        #     ball_dir_score = 0.25 if ball.vel_x <0 else 0
-
-        # reward_value+= ball_dir_score
+        
+        # # reward_value =-1
+        # ball = self.balls[0]
+        # dist_to_ball = math.dist([player.x,player.y],[ball.x,ball.y])
+        # reward_value = 0
         # target_goal_y = (self.field.goal_y_end + self.field.goal_y_start)/2
+        # if player.team.is_on_left_side:
+        #     if player.x > ball.x - (ball.radius + player.radius):
+        #         dist_to_ball += dist_to_ball
+        #     player_team = self.team_a
+        #     opponent_team = self.team_b
+        #     target_goal_x = self.field.right_goal_pos[0]
+        #     # ball_dir_score = 0.25 if ball.vel_x >0 else 0
+        # else:
+        #     if player.x < ball.x + (ball.radius + player.radius):
+        #         dist_to_ball +=dist_to_ball
+        #     player_team = self.team_b
+        #     opponent_team = self.team_a
+        #     target_goal_x = self.field.left_goal_pos[0]
+            # ball_dir_score = 0.25 if ball.vel_x <0 else 0
+        # dist_to_goal =  math.dist([target_goal_x,target_goal_y],[ball.x,ball.y])
 
-        # # # minimize the distant to the ball [-field corbnet+ off sett,0]
-        # k_value = -math.dist([player.x,player.y],[ball.x,ball.y])/2
 
-        # # minimize the distant to the ball to oppnent goal or maximize the distant to the ball to player goal [-1,0]
-        # k_value -= math.dist([target_goal_x,target_goal_y],[ball.x,ball.y])
-        # k_value = k_value/self.field.length 
 
-        # if player.is_kicked_ball:
-        #     reward_value += ball_dir_score
+        # reward_value += (-dist_to_ball - dist_to_goal)/self.field.length 
+        # #[-4,0]
 
-        # k_value += player_team.score-opponent_team.score
 
-        # k_value = -math.dist([player.x,player.y],[ball.x,ball.y])/self.field.length  
-        # k_value += 1 if player.is_kicked_ball else 0
-        # k_value = (player_team.score-opponent_team.score)
-        #[-1.5,-0.5]
-        return  reward_value  
+
+        # # reward_value+= ball_dir_score
+        # # target_goal_y = (self.field.goal_y_end + self.field.goal_y_start)/2
+
+        # # # # minimize the distant to the ball [-field corbnet+ off sett,0]
+        # # k_value = -math.dist([player.x,player.y],[ball.x,ball.y])/2
+
+        # # # minimize the distant to the ball to oppnent goal or maximize the distant to the ball to player goal [-1,0]
+        # # k_value -= math.dist([target_goal_x,target_goal_y],[ball.x,ball.y])
+        # # k_value = k_value/self.field.length 
+
+        # # if player.is_kicked_ball:
+        # #     reward_value += ball_dir_score
+
+        # # k_value += player_team.score-opponent_team.score
+
+        # # k_value = -math.dist([player.x,player.y],[ball.x,ball.y])/self.field.length  
+        # # k_value += 1 if player.is_kicked_ball else 0
+        # #[-1.5,-0.5]
+        # reward_value += (player_team.score-opponent_team.score)
+        return  -1  
 
 
     def get_state(self, player):
@@ -331,7 +345,36 @@ class FootBallGameEnv(gym.Env):
         self.model.env =env
         action,_  = self.model.predict(state, deterministic=True)
         return action
+
+    def get_ball_score(self, player, ball):
+        reward = 0
+
+        if player.team.is_on_left_side:
+            current_team_goal_x, current_team_goal_y_top, current_team_goal_y_bottom = self.field.left_goal_pos
+            opponent_team_goal_x, opponent_team_goal_y_top, opponent_team_goal_y_bottom = self.field.right_goal_pos
+            opponent_team_goal_x -= ball.radius
+            current_team_goal_x += ball.radius
+        else:
+            current_team_goal_x, current_team_goal_y_top, current_team_goal_y_bottom = self.field.right_goal_pos
+            opponent_team_goal_x, opponent_team_goal_y_top, opponent_team_goal_y_bottom = self.field.left_goal_pos
+            opponent_team_goal_x += ball.radius
+            current_team_goal_x -= ball.radius
+
+        if ball.vel_x == 0:
+            return reward  
         
+        if (player.team.is_on_left_side and ball.vel_x > 0) or (not player.team.is_on_left_side and ball.vel_x < 0):
+            intersect_opponent_goal_y = ball.y + (opponent_team_goal_x - ball.x) * (ball.vel_y / ball.vel_x)
+            if opponent_team_goal_y_top + ball.radius < intersect_opponent_goal_y < opponent_team_goal_y_bottom - ball.radius:
+                reward = 1
+
+        elif (player.team.is_on_left_side and ball.vel_x < 0) or (not player.team.is_on_left_side and ball.vel_x > 0):
+            intersect_own_goal_y = ball.y + (current_team_goal_x - ball.x) * (ball.vel_y / ball.vel_x)
+            if current_team_goal_y_top + ball.radius <= intersect_own_goal_y <= current_team_goal_y_bottom - ball.radius:
+                reward = -1
+
+        return reward
+
     # def get_model_action(self, player):
     #     # env = DummyVecEnv([lambda: self])
     #     # state = self.get_state(player)
